@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Course Project Writeup</title>
+  <meta charset="utf-8">
+  <meta name="description" content="Course Project Writeup">
+  <meta name="author" content="">
+  <meta name="generator" content="slidify" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta http-equiv="X-UA-Compatible" content="chrome=1">
+  <link rel="stylesheet" href="libraries/frameworks/io2012/css/default.css" media="all" >
+  <link rel="stylesheet" href="libraries/frameworks/io2012/css/phone.css" 
+    media="only screen and (max-device-width: 480px)" >
+  <link rel="stylesheet" href="libraries/frameworks/io2012/css/slidify.css" >
+  <link rel="stylesheet" href="libraries/highlighters/highlight.js/css/tomorrow.css" />
+  <base target="_blank"> <!-- This amazingness opens all links in a new tab. -->  <link rel=stylesheet href="./assets/css/ribbons.css"></link>
+
+  
+  <!-- Grab CDN jQuery, fall back to local if offline -->
+  <script src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.7.min.js"></script>
+  <script>window.jQuery || document.write('<script src="libraries/widgets/quiz/js/jquery.js"><\/script>')</script> 
+  <script data-main="libraries/frameworks/io2012/js/slides" 
+    src="libraries/frameworks/io2012/js/require-1.0.8.min.js">
+  </script>
+  
+  
+
+</head>
+<body style="opacity: 0">
+  <slides class="layout-widescreen">
+    
+    <!-- LOGO SLIDE -->
+        <slide class="title-slide segue nobackground">
+  <hgroup class="auto-fadein">
+    <h1>Course Project Writeup</h1>
+    <h2>for Practical Machine Learning on Cousera</h2>
+    <p><br/></p>
+  </hgroup>
+  <article></article>  
+</slide>
+    
+
+    <!-- SLIDES -->
+    <slide class="" id="slide-1" style="background:;">
+  <hgroup>
+    <h2>Overview (prediction mechanism and outcome)</h2>
+  </hgroup>
+  <article data-timings="">
+    <ul>
+<li>nearZeroVar() for data pre-process</li>
+<li>Random Forest for model training</li>
+<li>K-fold cross validation (k=10)</li>
+<li>100% In-Sample accuracy, 99.87% Out-of-Sample accuracy</li>
+<li>100% accuracy on pml-testing.csv prediction</li>
+</ul>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="" id="slide-2" style="background:;">
+  <hgroup>
+    <h2>Data pre-processing - handle missing values</h2>
+  </hgroup>
+  <article data-timings="">
+    <pre><code>## Warning: package &#39;caret&#39; was built under R version 3.1.2
+</code></pre>
+
+<pre><code>## Loading required package: lattice
+## Loading required package: ggplot2
+</code></pre>
+
+<pre><code class="r">data = read.csv(&#39;pml-training.csv&#39;); data2 = read.csv(&#39;pml-testing.csv&#39;)
+dim(data);
+</code></pre>
+
+<pre><code>## [1] 19622   160
+</code></pre>
+
+<p>In data2, we can see lots of NA value, we should skip those columns in building model</p>
+
+<pre><code class="r">nzv &lt;- nearZeroVar(data2) #in this case, nearZeroVar can help remove missing data 
+data &lt;- data[,-nzv] # note: we can apply nzv found on data2 to data because
+dim(data) # the column name and order in pml-testing.csv is same with pml-training.csv
+</code></pre>
+
+<pre><code>## [1] 19622    59
+</code></pre>
+
+<p>Then the training set now has 59 columns (58 predictors + 1 target column)</p>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="" id="slide-3" style="background:;">
+  <hgroup>
+    <h2>Data pre-processing - remove more predictors</h2>
+  </hgroup>
+  <article data-timings="">
+    <pre><code class="r">qplot(data$X,data$user_name,colour=data$classe,xlab=&quot;X&quot;,ylab=&quot;user&quot;)
+</code></pre>
+
+<p><img src="assets/fig/unnamed-chunk-4-1.png" alt="plot of chunk unnamed-chunk-4"> </p>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="" id="slide-4" style="background:;">
+  <hgroup>
+    <h2>Data pre-processing</h2>
+  </hgroup>
+  <article data-timings="">
+    <p>As shown in the graph on previous page, &#39;X&#39; is just a sequence id for each data row and might cause severe bias. (In my test includes this predictor, it has dominant varImp() and result in my prediction on 20 dataset are all &#39;A&#39; because they have small problem_id as 1-20 ) </p>
+
+<pre><code class="r">data &lt;- data[,-1] # remove &#39;X&#39; column which is in the first position 
+</code></pre>
+
+<p>Partition the data into training set and testing set by 60-40 ratio</p>
+
+<pre><code class="r">inTrain &lt;- createDataPartition(y=data$classe,p=0.6, list=F)
+training &lt;- data[inTrain,];testing &lt;- data[-inTrain,]
+dim(training);dim(testing)
+</code></pre>
+
+<pre><code>## [1] 11776    58
+</code></pre>
+
+<pre><code>## [1] 7846   58
+</code></pre>
+
+<p>Now we have 57 predictors (another one is target variable) to build our model</p>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="" id="slide-5" style="background:;">
+  <hgroup>
+    <h2>Training mechanism (cross-validation and random forest)</h2>
+  </hgroup>
+  <article data-timings="">
+    <p>Here I apply cross validation to better indepdently estimate accuracy.
+I set k=10 hope to have less bias.
+Random forest method take relatively longer (around 20-30 mins in my machine), but accuracy is good, compare with &#39;rpart&#39;.</p>
+
+<pre><code class="r">myTC = trainControl(method=&quot;cv&quot;,number=10)
+modFit &lt;- train(classe~.,data=training,method=&quot;rf&quot;,trControl=myTC)
+</code></pre>
+
+<h3>Random Forest</h3>
+
+<ul>
+<li>11776 samples, 57 predictors, 5 classes: &#39;A&#39;, &#39;B&#39;, &#39;C&#39;, &#39;D&#39;, &#39;E&#39;</li>
+<li>Type of random forest: classification.</li>
+<li>Number of trees: 500. No. of variables tried at each split: 40</li>
+<li>OOB estimate of  error rate: 0.08%<br></li>
+</ul>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="" id="slide-6" style="background:;">
+  <hgroup>
+    <h2>Out-of-sample error and prediction outcome</h2>
+  </hgroup>
+  <article data-timings="">
+    <p>we can use qplot (or confustionMatrix) function to show the prediction based on the model</p>
+
+<pre><code class="r">qplot(predict(modFit,testing),classe,data=testing,main=&quot;Out-of-Sample Accuracy&quot;, 
+      xlab=&quot;predict classe&quot;, ylab=&quot;actual classe&quot;)
+</code></pre>
+
+<p><img src='figure/confusionMatrixOut.png' width='400px' height='300px'/></p>
+
+<h4>The 99.87% Out-of-Sample accuracy is still high enough. (and the model has 100% In-Sample accuracy)</h4>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="" id="slide-7" style="background:;">
+  <hgroup>
+    <h2>Prediction on data in pml-testing.csv</h2>
+  </hgroup>
+  <article data-timings="">
+    <pre><code class="r">qplot(data2$problem_id,predict(modFit,data2), colour=predict(modFit,data2),
+      xlab=&quot;problem id&quot;,ylab=&quot;predict classe&quot;, height=&quot;100&quot;)
+</code></pre>
+
+<p><img src='figure/predictionResult.png' /></p>
+
+<h4>It has 100% of accuracy (all passed online grader)</h4>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="" id="slide-8" style="background:;">
+  <hgroup>
+    <h2>Other - rf variable importance</h2>
+  </hgroup>
+  <article data-timings="">
+    <p>After check with varImp(), It&#39;s interesting that this random forest model mostly use &#39;raw_timestamp_part_1&#39;, &#39;roll_belt &#39;, and &#39;num_window&#39; to make prediction </p>
+
+<pre><code class="r">varImp(modFit)
+</code></pre>
+
+<table>
+<tr>
+<td>
+Overall
+</td>
+<td></td>
+<tr><td>100.000</td><td>raw_timestamp_part_1 </td></tr>
+<tr><td>44.774</td><td>roll_belt</td></tr>
+<tr><td>43.274</td><td>num_window</td></tr>
+<tr><td>26.395</td><td>pitch_forearm</td></tr>
+<tr><td>19.331</td><td>magnet_dumbbell_z</td></tr>
+<tr><td>15.382</td><td>magnet_dumbbell_y</td></tr>
+<tr><td>(below omitted....)</td><td></td></tr>
+</table>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+    <slide class="backdrop"></slide>
+  </slides>
+  <div class="pagination pagination-small" id='io2012-ptoc' style="display:none;">
+    <ul>
+      <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=1 title='Overview (prediction mechanism and outcome)'>
+         1
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=2 title='Data pre-processing - handle missing values'>
+         2
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=3 title='Data pre-processing - remove more predictors'>
+         3
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=4 title='Data pre-processing'>
+         4
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=5 title='Training mechanism (cross-validation and random forest)'>
+         5
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=6 title='Out-of-sample error and prediction outcome'>
+         6
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=7 title='Prediction on data in pml-testing.csv'>
+         7
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=8 title='Other - rf variable importance'>
+         8
+      </a>
+    </li>
+  </ul>
+  </div>  <!--[if IE]>
+    <script 
+      src="http://ajax.googleapis.com/ajax/libs/chrome-frame/1/CFInstall.min.js">  
+    </script>
+    <script>CFInstall.check({mode: 'overlay'});</script>
+  <![endif]-->
+</body>
+  <!-- Load Javascripts for Widgets -->
+  
+  <!-- LOAD HIGHLIGHTER JS FILES -->
+  <script src="libraries/highlighters/highlight.js/highlight.pack.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+  <!-- DONE LOADING HIGHLIGHTER JS FILES -->
+   
+  </html>
