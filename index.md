@@ -1,13 +1,13 @@
 ---
-title: "Course Project Writeup"
-highlighter: highlight.js
-hitheme: tomorrow
-output: pdf_document
-mode: selfcontained
-knit: slidify::knit2slides
-subtitle: for Practical Machine Learning on Cousera
-framework: io2012
-widgets: []
+title       : Course Project Writeup 
+subtitle    : Practical Machine Learning on Cousera
+author      : mirizzi
+framework   : io2012        # {io2012, html5slides, shower, dzslides, ...}
+highlighter : highlight.js  # {highlight.js, prettify, highlight}
+hitheme     : tomorrow      # 
+widgets     : []            # {mathjax, quiz, bootstrap}
+mode        : selfcontained # {standalone, draft}
+knit        : slidify::knit2slides
 ---
 
 ## Overview (prediction mechanism and outcome)
@@ -156,4 +156,3 @@ Overall
 <tr><td>15.382</td><td>magnet_dumbbell_y</td></tr>
 <tr><td>(below omitted....)</td><td></td></tr>
 </table>
-
